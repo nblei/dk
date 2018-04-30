@@ -80,10 +80,10 @@ void byte_to_hex(void * dest, uint8_t byte)
     dest8[1] = nibble_hex[ (byte & 0x0f) ];
 }
 
-void create_intel_hex(struct dkong * dkong)
+void create_intel_hex(uint8_t * src, const char * fname, size_t size)
 {
     FILE * fd;
-    if (NULL == (fd = fopen("dk_prg_rom.hex", "w+"))) {
+    if (NULL == (fd = fopen(fname, "w+"))) {
         printf("Failed to open fd\n");
         return;
     }
@@ -96,15 +96,15 @@ void create_intel_hex(struct dkong * dkong)
     rec.write.record_type[0] = '0';
 
     byte_to_hex(rec.write.byte_count, BYTE_COUNT);
-    while (rec.addr < KB16) {
+    while (rec.addr < size) {
         rec.checksum = BYTE_COUNT +
             (uint8_t)rec.addr + 
             (uint8_t)( (rec.addr & 0xff00) >> 8);
 
         for (int i = 0; i < BYTE_COUNT; ++i) {
             byte_to_hex(rec.write.data + i*2,
-                    dkong->prg_rom0[rec.addr + i]);
-            rec.checksum += dkong->prg_rom0[rec.addr + i];
+                   src[rec.addr + i]);
+            rec.checksum += src[rec.addr + i];
         }
 
         rec.checksum = (~rec.checksum) + 1;
@@ -126,6 +126,8 @@ void create_intel_hex(struct dkong * dkong)
 close_exit:
     fclose(fd);
 }
+
+
 
 void create_files(struct dkong * dkong)
 {
@@ -237,7 +239,8 @@ int main(void)
    int byte_read = fread(dkong, sizeof(struct dkong), 1, fd);
 
    printf("Read %d dkong\n", byte_read);
-   create_intel_hex(dkong);
+   create_intel_hex(dkong->prg_rom0, "dk_prg_rom.hex", KB16);
+   create_intel_hex(dkong->chr_rom, "dk_chr_rom.hex", KB8);
    //create_files(dkong);
    //create_fat_file(dkong);
 
